@@ -1,8 +1,11 @@
 package com.fraudulentteam.frauddetector;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -16,10 +19,16 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText;
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentTextRecognizer;
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 public class ImageViewActivity extends AppCompatActivity {
@@ -27,6 +36,7 @@ public class ImageViewActivity extends AppCompatActivity {
     Bitmap mSelectedImage;
     List<String> allLinesTexts = new ArrayList<>();
     String legalName = "Tianning Shen";
+    String AUTH_SIG = "authorized signature";
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -42,7 +52,11 @@ public class ImageViewActivity extends AppCompatActivity {
         mSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                runTextRecognition();
+                if (isNetworkConnectionAvailable()) {
+                    runCloudTextRecognition();
+                } else {
+                    runTextRecognition();
+                }
             }
         });
 
@@ -56,10 +70,72 @@ public class ImageViewActivity extends AppCompatActivity {
         mSelectedImage = Bitmap.createBitmap(mSelectedImage, 0, 0, mSelectedImage.getWidth(), mSelectedImage.getHeight(), matrix, true);
     }
 
+    private void runCloudTextRecognition() {
+        FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(mSelectedImage);
+        FirebaseVisionDocumentTextRecognizer recognizer = FirebaseVision.getInstance()
+                .getCloudDocumentTextRecognizer();
+        recognizer.processImage(image)
+                .addOnSuccessListener(
+                        new OnSuccessListener<FirebaseVisionDocumentText>() {
+                            @Override
+                            public void onSuccess(FirebaseVisionDocumentText texts) {
+                                mSaveButton.setEnabled(true);
+                                processCloudTextRecognitionResult(texts);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                // Task failed with an exception
+                                mSaveButton.setEnabled(true);
+                                e.printStackTrace();
+                            }
+                        });
+    }
+
+    private void processCloudTextRecognitionResult(FirebaseVisionDocumentText text) {
+        // Task completed successfully
+        if (text == null) {
+            showToast("No text found");
+            return;
+        }
+        List<FirebaseVisionDocumentText.Block> blocks = text.getBlocks();
+        for (int i = 0; i < blocks.size(); i++) {
+            List<FirebaseVisionDocumentText.Paragraph> paragraphs = blocks.get(i).getParagraphs();
+            for (int j = 0; j < paragraphs.size(); j++) {
+                allLinesTexts.add(paragraphs.get(j).getText());
+                List<FirebaseVisionDocumentText.Word> words = paragraphs.get(j).getWords();
+                for (int l = 0; l < words.size(); l++) {
+
+                }
+            }
+        }
+
+        for (String line : allLinesTexts) {
+            if (line.contains(legalName)) {
+                isLegalNameIn = true;
+            }
+        }
+        // Date must be no greater than today
+        // Authorized signature
+        // Dollars xxx.xx
+
+        // can do routing number and account number with cloud vision API
+        if (!isLegalNameIn) {
+            showToast("Fake Check");
+        } else {
+            showToast("Great Work");
+        }
+
+        allLinesTexts.clear();
+    }
+
     private void runTextRecognition() {
         FirebaseVisionImage image = FirebaseVisionImage.fromBitmap(mSelectedImage);
         FirebaseVisionTextRecognizer recognizer = FirebaseVision.getInstance()
                 .getOnDeviceTextRecognizer();
+
         mSaveButton.setEnabled(false);
         recognizer.processImage(image)
                 .addOnSuccessListener(
@@ -82,6 +158,8 @@ public class ImageViewActivity extends AppCompatActivity {
     }
 
     private boolean isLegalNameIn = false;
+    private boolean hasAuthSig = false;
+    private boolean hasValidDate = false;
 
     private void processTextRecognitionResult(FirebaseVisionText texts) {
         List<FirebaseVisionText.TextBlock> blocks = texts.getTextBlocks();
@@ -97,17 +175,26 @@ public class ImageViewActivity extends AppCompatActivity {
             }
         }
 
+        isLegalNameIn = false;
+        hasAuthSig = false;
+        hasValidDate = false;
+
         for (String line : allLinesTexts) {
             if (line.contains(legalName)) {
                 isLegalNameIn = true;
+            } else if (line.toLowerCase().contains(AUTH_SIG)) {
+                hasAuthSig = true;
+            } else if (isValidFormat("MM/dd/yy", line) || isValidFormat("MM-dd-yyyy", line)) {
+                hasValidDate = true;
             }
+
         }
         // Date must be no greater than today
         // Authorized signature
         // Dollars xxx.xx
 
         // can do routing number and account number with cloud vision API
-        if (!isLegalNameIn) {
+        if (!isLegalNameIn || !hasAuthSig || !hasValidDate) {
             showToast("Fake Check");
         } else {
             showToast("Great Work");
@@ -117,7 +204,29 @@ public class ImageViewActivity extends AppCompatActivity {
 
     }
 
+    public static boolean isValidFormat(String format, String value) {
+        Date date = null;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat(format);
+            date = sdf.parse(value);
+            if (!value.equals(sdf.format(date)) || !(sdf.format(new Date()).compareTo(value) >= 0)) {
+                date = null;
+            }
+        } catch (ParseException ex) {
+            ex.printStackTrace();
+        }
+        return date != null;
+    }
+
     private void showToast(String message) {
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    private boolean isNetworkConnectionAvailable() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = cm.getActiveNetworkInfo();
+        if (info == null) return false;
+        NetworkInfo.State network = info.getState();
+        return (network == NetworkInfo.State.CONNECTED || network == NetworkInfo.State.CONNECTING);
     }
 }
