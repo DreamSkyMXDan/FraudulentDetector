@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "198996470268",
+    "firebase_url": "https://frauddetector-7b4d8.firebaseio.com",
+    "project_id": "frauddetector-7b4d8",
+    "storage_bucket": "frauddetector-7b4d8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:198996470268:android:e6277bb84ac3197f",
+        "android_client_info": {
+          "package_name": "com.fraudulentteam.frauddetector"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "198996470268-3bbsismmi39nqo63d5hrip7pka7f2gd2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApLYMI1cTU5GUdK1_5RCUdpKj1cOCzyrw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "198996470268-3bbsismmi39nqo63d5hrip7pka7f2gd2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
