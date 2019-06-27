@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -24,6 +25,7 @@ import com.google.firebase.ml.vision.document.FirebaseVisionDocumentTextRecogniz
 import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -37,10 +39,12 @@ public class ImageViewActivity extends AppCompatActivity {
     List<String> allLinesTexts = new ArrayList<>();
     String legalName = "Tianning Shen";
     String AUTH_SIG = "authorized signature";
+    private Classifier mClassifier;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.imageview_layout);
+        init();
         ImageView imageView = findViewById(R.id.image);
         byte[] checks = Repository.getInstance().getChecks();
         mSelectedImage = BitmapFactory.decodeByteArray(checks, 0, checks.length);
@@ -52,6 +56,9 @@ public class ImageViewActivity extends AppCompatActivity {
         mSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+//                Result result = mClassifier.classify(mSelectedImage);
+//                showToast(Integer.toString(result.getNumber()));
                 if (isNetworkConnectionAvailable()) {
                     runCloudTextRecognition();
                 } else {
@@ -60,6 +67,15 @@ public class ImageViewActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private void init() {
+        try {
+            mClassifier = new Classifier(this);
+        } catch (IOException e) {
+            Toast.makeText(this, "Failed to load model", Toast.LENGTH_LONG).show();
+            Log.e(ImageViewActivity.class.getSimpleName(), "init(): Failed to create Classifier", e);
+        }
     }
 
     private void rotateImage(){
@@ -104,7 +120,7 @@ public class ImageViewActivity extends AppCompatActivity {
         for (int i = 0; i < blocks.size(); i++) {
             List<FirebaseVisionDocumentText.Paragraph> paragraphs = blocks.get(i).getParagraphs();
             for (int j = 0; j < paragraphs.size(); j++) {
-                allLinesTexts.add(paragraphs.get(j).getText());
+                allLinesTexts.add(paragraphs.get(j).getText().replace("\n", "").replace("\r", ""));
                 List<FirebaseVisionDocumentText.Word> words = paragraphs.get(j).getWords();
                 for (int l = 0; l < words.size(); l++) {
 
@@ -112,23 +128,7 @@ public class ImageViewActivity extends AppCompatActivity {
             }
         }
 
-        for (String line : allLinesTexts) {
-            if (line.contains(legalName)) {
-                isLegalNameIn = true;
-            }
-        }
-        // Date must be no greater than today
-        // Authorized signature
-        // Dollars xxx.xx
-
-        // can do routing number and account number with cloud vision API
-        if (!isLegalNameIn) {
-            showToast("Fake Check");
-        } else {
-            showToast("Great Work");
-        }
-
-        allLinesTexts.clear();
+        checkValidility();
     }
 
     private void runTextRecognition() {
@@ -170,11 +170,15 @@ public class ImageViewActivity extends AppCompatActivity {
         for (int i = 0; i < blocks.size(); i++) {
             List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
             for (int j = 0; j < lines.size(); j++) {
-                String line = lines.get(j).toString();
-                allLinesTexts.add(lines.get(j).getText());
+                allLinesTexts.add(lines.get(j).getText().replace("\n", "").replace("\r", ""));
             }
         }
 
+        checkValidility();
+
+    }
+
+    private void checkValidility(){
         isLegalNameIn = false;
         hasAuthSig = false;
         hasValidDate = false;
@@ -201,7 +205,10 @@ public class ImageViewActivity extends AppCompatActivity {
         }
 
         allLinesTexts.clear();
+    }
 
+    public void onCancel(View view) {
+        this.finish();
     }
 
     public static boolean isValidFormat(String format, String value) {
