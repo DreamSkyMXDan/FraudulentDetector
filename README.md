@@ -1,12 +1,12 @@
 # FraudulentDetector
 ===================================
 
-This sample demonstrates how to use Camera2
+This project demonstrates how to use Camera2
 API and FirebaseVision API to detect and extract texts from images. 
 
-Background
+Introduction
 ------------
-
+This project is to show the use case of quick deposit on Android device. Suppose user wants to take a photo of a check and deposits it to his/her checking account. The photo cannot be an image of dog, cat, laptop, chair, floor, etc. It needs to a check image. However to validate it is a check image, all the work is done on server side nowadays and this project is to use a tensorflowlite model running on Android device to classify the image. With this, 75% of the fake images will be blocked in front end and server doesn't need to handle those http request with fake images.
 
 Pre-requisites
 --------------
@@ -15,34 +15,15 @@ Pre-requisites
 - Android Build Tools v27.0.2
 - Android Support Repository
 
-Screenshots
--------------
-
-<img src="screenshots/main.png" height="400" alt="Screenshot"/> 
 
 Getting Started
 ---------------
 
-This sample uses the Gradle build system. To build this project, use the
+This project uses the Gradle build system. To build this project, use the
 "gradlew build" command or use "Import Project" in Android Studio.
 
 
 License
 -------
 
-Copyright 2017 The Android Open Source Project, Inc.
-
-Licensed to the Apache Software Foundation (ASF) under one or more contributor
-license agreements.  See the NOTICE file distributed with this work for
-additional information regarding copyright ownership.  The ASF licenses this
-file to you under the Apache License, Version 2.0 (the "License"); you may not
-use this file except in compliance with the License.  You may obtain a copy of
-the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-License for the specific language governing permissions and limitations under
-the License.
+It is free, and may be redistributed under the terms specified in the [LICENSE](https://github.com/DreamSkyMXDan/Machine-Learning-Project/blob/master/project/LICENSE) file.
