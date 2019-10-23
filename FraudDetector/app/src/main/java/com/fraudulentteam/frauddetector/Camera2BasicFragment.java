@@ -42,6 +42,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import java.io.File;
@@ -242,6 +243,16 @@ public class Camera2BasicFragment extends Fragment
 
     };
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 0) {
+            if (resultCode == 1) {
+                mEditAmount.setText("$" + data.getStringExtra("amount"));
+            }
+        }
+    }
+
     /**
      * {@link CaptureRequest.Builder} for the camera preview
      */
@@ -418,11 +429,14 @@ public class Camera2BasicFragment extends Fragment
         return inflater.inflate(R.layout.camera_fragment, container, false);
     }
 
+    private EditText mEditAmount;
+
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         view.findViewById(R.id.picture).setOnClickListener(this);
 //        view.findViewById(R.id.info).setOnClickListener(this);
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
+        mEditAmount = view.findViewById(R.id.amount);
     }
 
     @Override
@@ -760,6 +774,7 @@ public class Camera2BasicFragment extends Fragment
      * Initiate a still image capture.
      */
     private void takePicture() {
+        mEditAmount.setText("$0.00");
         lockFocus();
     }
 

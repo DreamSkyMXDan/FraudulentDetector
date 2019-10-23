@@ -1,6 +1,7 @@
 package com.fraudulentteam.frauddetector;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -26,9 +27,11 @@ import com.google.firebase.ml.vision.text.FirebaseVisionText;
 import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -37,15 +40,18 @@ public class ImageViewActivity extends AppCompatActivity {
     Button mSaveButton;
     Bitmap mSelectedImage;
     List<String> allLinesTexts = new ArrayList<>();
-    String legalName = "Tianning Shen";
+    String PAY_TO_THE_ORDER_OF = "pay to the order of";
+    String PAY_TO_THE = "pay to the";
+    String TO_THE_ORDER_OF = "to the order of";
     String AUTH_SIG = "authorized signature";
     private Classifier mClassifier;
+    private ImageView imageView;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.imageview_layout);
         init();
-        ImageView imageView = findViewById(R.id.image);
+        imageView = findViewById(R.id.image);
         byte[] checks = Repository.getInstance().getChecks();
         mSelectedImage = BitmapFactory.decodeByteArray(checks, 0, checks.length);
         imageView.setImageBitmap(mSelectedImage);
@@ -57,16 +63,45 @@ public class ImageViewActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-//                Result result = mClassifier.classify(mSelectedImage);
+//                Bitmap resized = Bitmap.createScaledBitmap(mSelectedImage, 28, 28, false);
+//                int size = mSelectedImage.getRowBytes() * mSelectedImage.getHeight();
+//                ByteBuffer byteBuffer = ByteBuffer.allocate(size);
+//                mSelectedImage.copyPixelsToBuffer(byteBuffer);
+//
+//                Bitmap resized = resizeBitmap(byteBuffer.array(), 28, 28);
+//                imageView.setImageBitmap(resized);
+
+
+//                Result result = mClassifier.classify(resized);
 //                showToast(Integer.toString(result.getNumber()));
                 if (isNetworkConnectionAvailable()) {
-                    runCloudTextRecognition();
+                    runTextRecognition();
                 } else {
                     runTextRecognition();
                 }
             }
         });
 
+    }
+
+    public Bitmap resizeBitmap(byte[] bytes, int targetW, int targetH) {
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = true;
+        // BitmapFactory.
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bmOptions);
+        int photoW = bmOptions.outWidth;
+        int photoH = bmOptions.outHeight;
+
+        int scaleFactor = 1;
+        if ((targetW > 0) || (targetH > 0)) {
+            scaleFactor = Math.min(photoW/targetW, photoH/targetH);
+        }
+
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = scaleFactor;
+        bmOptions.inPurgeable = true; //Deprecated API 21
+
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bmOptions);
     }
 
     private void init() {
@@ -120,14 +155,13 @@ public class ImageViewActivity extends AppCompatActivity {
         for (int i = 0; i < blocks.size(); i++) {
             List<FirebaseVisionDocumentText.Paragraph> paragraphs = blocks.get(i).getParagraphs();
             for (int j = 0; j < paragraphs.size(); j++) {
-                allLinesTexts.add(paragraphs.get(j).getText().replace("\n", "").replace("\r", ""));
+                allLinesTexts.add(paragraphs.get(j).getText());
                 List<FirebaseVisionDocumentText.Word> words = paragraphs.get(j).getWords();
                 for (int l = 0; l < words.size(); l++) {
 
                 }
             }
         }
-
         checkValidility();
     }
 
@@ -157,8 +191,8 @@ public class ImageViewActivity extends AppCompatActivity {
                         });
     }
 
-    private boolean isLegalNameIn = false;
-    private boolean hasAuthSig = false;
+    private boolean hasPayToOrder = false;
+//    private boolean hasAuthSig = false;
     private boolean hasValidDate = false;
 
     private void processTextRecognitionResult(FirebaseVisionText texts) {
@@ -170,7 +204,7 @@ public class ImageViewActivity extends AppCompatActivity {
         for (int i = 0; i < blocks.size(); i++) {
             List<FirebaseVisionText.Line> lines = blocks.get(i).getLines();
             for (int j = 0; j < lines.size(); j++) {
-                allLinesTexts.add(lines.get(j).getText().replace("\n", "").replace("\r", ""));
+                allLinesTexts.add(lines.get(j).getText());
             }
         }
 
@@ -178,33 +212,46 @@ public class ImageViewActivity extends AppCompatActivity {
 
     }
 
+    String amount = "0.00";
     private void checkValidility(){
-        isLegalNameIn = false;
-        hasAuthSig = false;
-        hasValidDate = false;
+        hasPayToOrder = false;
 
         for (String line : allLinesTexts) {
-            if (line.contains(legalName)) {
-                isLegalNameIn = true;
-            } else if (line.toLowerCase().contains(AUTH_SIG)) {
-                hasAuthSig = true;
-            } else if (isValidFormat("MM/dd/yy", line) || isValidFormat("MM-dd-yyyy", line)) {
+            if (line.replace("\n", " ").toLowerCase().contains(PAY_TO_THE_ORDER_OF) || line.replace("\n", " ").toLowerCase().contains(PAY_TO_THE) || line.replace("\n", " ").toLowerCase().contains(TO_THE_ORDER_OF)) {
+                hasPayToOrder = true;
+            }
+//            else if (line.toLowerCase().contains(AUTH_SIG)) {
+//                hasAuthSig = true;
+//            }
+            else if (isValidFormat("MM/dd/yy", line) || isValidFormat("MM-dd-yyyy", line) || isValidFormat("M-dd-yyyy", line) || isValidFormat("M-dd-yy", line)) {
                 hasValidDate = true;
             }
 
+            else if (line.contains("$")) {
+                amount = line.substring(line.indexOf("$") + 1).replaceAll("\\s","").replace("\n", "");
+            }
         }
         // Date must be no greater than today
         // Authorized signature
         // Dollars xxx.xx
 
         // can do routing number and account number with cloud vision API
-        if (!isLegalNameIn || !hasAuthSig || !hasValidDate) {
-            showToast("Fake Check");
+        allLinesTexts.clear();
+        if (!hasPayToOrder || !hasValidDate) {
+            if (!hasPayToOrder) {
+                showToast("Fake Check No Pay To Order");
+            } else {
+                showToast("Fake Check No Valid Date");
+            }
         } else {
-            showToast("Great Work");
+            showToast("Good Check");
+            Intent intent = new Intent();
+            intent.putExtra("amount", amount);
+            setResult(1, intent);
+            finish();
         }
 
-        allLinesTexts.clear();
+
     }
 
     public void onCancel(View view) {
@@ -213,10 +260,23 @@ public class ImageViewActivity extends AppCompatActivity {
 
     public static boolean isValidFormat(String format, String value) {
         Date date = null;
+        List<String> list = Arrays.asList(value.split("\n"));
+        if (list != null && list.size() > 0) {
+            value = list.get(0);
+        }
+
+        if (value.indexOf("_") >= 0) {
+            value = value.substring(value.indexOf("_") + 1);
+        }
+
+        if (value.indexOf(" ") >= 0) {
+            value = value.substring(value.indexOf(" ") + 1);
+        }
+
         try {
             SimpleDateFormat sdf = new SimpleDateFormat(format);
             date = sdf.parse(value);
-            if (!value.equals(sdf.format(date)) || !(sdf.format(new Date()).compareTo(value) >= 0)) {
+            if (!value.equals(sdf.format(date)) || !(new Date().compareTo(date) >= 0)) {
                 date = null;
             }
         } catch (ParseException ex) {
@@ -226,7 +286,7 @@ public class ImageViewActivity extends AppCompatActivity {
     }
 
     private void showToast(String message) {
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
     private boolean isNetworkConnectionAvailable() {

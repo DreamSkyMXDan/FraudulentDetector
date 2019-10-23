@@ -12,7 +12,8 @@
 -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <com.fraudulentteam.frauddetector.AutoFitTextureView
         android:id="@+id/texture"
@@ -21,7 +22,7 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true" />
 
-    <FrameLayout
+    <android.support.constraint.ConstraintLayout
         android:id="@+id/control"
         android:layout_width="match_parent"
         android:layout_height="112dp"
@@ -29,13 +30,28 @@
         android:layout_alignParentStart="true"
         android:background="@color/control_background">
 
+        <EditText
+            android:id="@+id/amount"
+            android:text="$0.00"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/picture"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintVertical_chainStyle="packed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
         <Button
-            android:id="@+id/picture"
+            android:id="@id/picture"
+            app:layout_constraintStart_toEndOf="@id/amount"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintVertical_chainStyle="packed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
             android:text="@string/picture" />
 
-    </FrameLayout>
+    </android.support.constraint.ConstraintLayout>
 
 </RelativeLayout>
